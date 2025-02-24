@@ -1,0 +1,141 @@
+---
+title: "Tropi Physical Monitoring - Data Preparation"
+author: "Dan Aurell"
+date: "2025-01-17"
+output:
+  html_document: 
+    keep_md: yes
+---
+
+# Setup
+```{r}
+library(tidyverse)
+```
+
+# Read in data
+```{r}
+datum <- read.csv("./data/2025-02-24 monitoring field data reduced.csv") 
+```
+
+
+# Prepare data
+```{r}
+# names(datum)
+
+# Reduce dataset to columns I'll use
+datum <- datum %>% 
+  select(colony_id,
+         tropi_infest200:varroa_alc
+         )
+
+# Make a percent Tropi and Percent Varroa column
+
+datum <- datum %>% 
+  mutate(tropi_infest100 = tropi_infest200/2,
+         varroa_infest100 = varroa_infest200/2) %>% 
+  select(colony_id, 
+         tropi_infest100, 
+         varroa_infest100, 
+         everything(),
+         -c(tropi_infest200, varroa_infest200) # get 200-cell ones out of the way
+         )
+
+# Make a column to indicate if the row is part of the "core" dataset - the 26 colonies which had all monitoring methods applied to them
+
+datum <- datum %>% 
+  mutate(core = case_when(
+    !is.na(tropi_alc) ~ 1,
+    is.na(tropi_alc) ~ 0
+  ))
+
+
+```
+
+
+## Making long dataset
+
+```{r}
+names(datum)
+
+# Main version of long dataset - Predictors (Tropi and Varroa data from uncapping) in their own column, but results from all the other tests are in a combined column
+
+datum_long <- datum %>% 
+  pivot_longer(cols = c(
+    tropi_infest100,
+    varroa_infest100,
+    tropi_sticky,
+    tropi_powsug,
+    tropi_alc,
+    tropi_bump,
+    varroa_powsug,
+    varroa_alc
+    ),
+    names_to = c("target", ".value"), 
+    names_sep = "_"
+  ) %>% 
+
+  pivot_longer(cols = c(
+    sticky,
+    powsug,
+    alc,
+    bump
+  ),
+    names_to = "test",
+    values_to = "mites_num"
+  )
+
+# A version with even the predictors (infestation of brood cells) pivoted by target species
+datum_long_all <- datum %>% 
+  pivot_longer(cols = c(
+    tropi_infest100,
+    varroa_infest100,
+    tropi_sticky,
+    tropi_powsug,
+    tropi_alc,
+    tropi_bump,
+    varroa_powsug,
+    varroa_alc
+    ),
+    names_to = c("target", ".value"), 
+    names_sep = "_"
+  ) %>% 
+
+  pivot_longer(cols = c(
+    infest100,
+    sticky,
+    powsug,
+    alc,
+    bump
+  ),
+    names_to = "test",
+    values_to = "mites_num"
+  )
+
+
+
+```
+
+## Score detection or not
+
+```{r}
+datum_long <- datum_long %>% 
+  mutate(detect01 = if_else(mites_num > 0, 1, 0))
+
+datum_long_all <- datum_long_all %>% 
+  mutate(detect01 = if_else(mites_num > 0, 1, 0))
+```
+
+
+# Subsets for all methods [for Tropi] that are worse than uncapping
+```{r}
+sub_powsug <- datum_long %>% 
+  filter(target == "tropi", test == "powsug")
+
+sub_alc <- datum_long %>% 
+  filter(target == "tropi", test == "alc")
+
+sub_bump <- datum_long %>% 
+  filter(target == "tropi", test == "bump")
+```
+
+

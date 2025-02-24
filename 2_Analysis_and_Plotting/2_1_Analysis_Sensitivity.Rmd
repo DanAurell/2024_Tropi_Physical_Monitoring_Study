@@ -1,0 +1,198 @@
+---
+title: "Tropi Physical Monitoring - Analysis of Test Sensitivity"
+author: "Dan Aurell"
+date: "2025-01-17"
+output: 
+  html_document:
+    keep_md: yes
+---
+
+# Setup
+```{r}
+library(tidyverse)
+library(MASS)
+library(lme4)
+library(ggpubr)
+library(broom)
+library(gt)
+library(multcomp)
+```
+
+
+# Descriptive stats
+```{r}
+# Sample size
+# Methods: We analyzed data from 29 colonies. For all colonies, we performed the sticky board test, cell uncapping, bump test, and powdered sugar test. For 26 of 29 we performed alcohol washes. Tropilaelaps mites were assessed for all test methods, whereas Varroa were assessed only for cell uncapping, powdered sugar shake, and alcohol wash.
+
+datum %>% 
+  summarise(
+    tropi_min = min(tropi_infest100),
+    tropi_max = max(tropi_infest100),
+    tropi_mean = mean(tropi_infest100),
+    tropi_sd = sd(tropi_infest100)
+    )
+
+# Results: For the 29 colonies, the Tropilaelaps cell infestations ranged from 0-37% (mean = 7.8%, SD = 10.0%). 
+
+
+datum %>% 
+  summarise(
+    varroa_min = min(varroa_infest100),
+    varroa_max = max(varroa_infest100),
+    varroa_mean = mean(varroa_infest100),
+    varroa_sd = sd(varroa_infest100)
+    )
+# Results: For the 29 colonies, the Varroa cell infestations ranged from 0-53% (mean = 3.5%, SD = 9.9%). 
+
+```
+
+
+
+# Sensitivity - detection rate by sample method
+
+## Make a sensitivity table - estimated detection rate by sample method
+```{r}
+table_percent_detection_core <- datum_long_all %>% 
+  filter(core == 1) %>% 
+  group_by(target, test) %>% 
+  summarise(n = n(),
+            nas = sum(is.na(detect01)),
+            detect_n = sum(detect01, na.rm = TRUE),
+            nondetect_n = n - nas - detect_n,
+            denom = detect_n + nondetect_n,
+            perc_detect = 100*detect_n/denom,
+            ) %>% 
+  arrange(target, desc(perc_detect))
+
+write.csv(table_percent_detection_core, "./outputs/table_percent_detection_core.csv")
+```
+
+## Sensitivity - Analyze Tropilaelaps detection rate by sample method
+```{r}
+# Using the datum_long_all data frame because I do want to make comparisons with also uncapping 
+
+names(datum_long_all)
+unique(datum_long_all$test)
+
+# Only Tropi
+sub_tropi_detect <- datum_long_all %>% 
+  filter(core == 1,
+         target == "tropi"
+         )
+
+# Fit null model and another with test type as a predictor
+m.detect.0 <- glm(detect01 ~ 1, family = binomial, data = sub_tropi_detect)
+m.detect.1 <- glm(detect01 ~ test, family = binomial, data = sub_tropi_detect)
+
+anova(m.detect.0, m.detect.1, test = "Chisq")
+# Results: Monitoring method had a significant impact on the probability of detecting Tropilaelaps mites from a colony (Chisq = 51.004, df = 4, P < 0.001)
+
+TukeyHSD(aov(m.detect2.1))
+# Results: 
+# (expressed in CLD)
+# sticky ^ a
+# infest100 ^ a
+# bump ^ a
+# powsug ^ b
+# alc ^ b
+
+paircomp_tropi <- tidy(TukeyHSD(aov(m.detect2.1)))
+```
+
+
+```{r}
+# Nice Tropi pairwise comparisons table with gt
+
+tbl.paircomp_tropi <- gt(paircomp_tropi) %>% 
+  fmt_number(
+    columns = c("adj.p.value"),
+    decimals = c(6))
+
+tbl.paircomp_tropi <- tbl.paircomp_tropi %>%
+  as_rtf()
+
+my_conn <- file("./outputs/paircomp_tropi_2025-02-10.RTF", "w")
+  writeLines(tbl.paircomp_tropi, my_conn)
+close(my_conn)
+```
+
+
+## Sensitivity - Analyze Varroa detection rate by sample method
+```{r}
+# Using the datum_long_all data frame because I do want to make comparisons with also uncapping 
+
+names(datum_long_all)
+unique(datum_long_all$test)
+
+# For Varroa, need to omit sticky board and bump since did not record Varroa on them
+sub_varroa_detect <- datum_long_all %>% 
+  filter(core == 1,
+         target == "tropi",
+         test %in% c("infest100", "powsug", "alc")
+         )
+
+# Fit null model and another with test as a predictor
+m.detect_varroa.0 <- glm(detect01 ~ 1, family = binomial, data = sub_varroa_detect)
+m.detect_varroa.1 <- glm(detect01 ~ test, family = binomial, data = sub_varroa_detect)
+
+anova(m.detect_varroa.0, m.detect_varroa.1, test = "Chisq")
+# Results: Monitoring method had a significant impact on the probability of detecting Varroa mites from a colony (Chisq = 25.019, df = 2, P < 0.001)
+
+TukeyHSD(aov(m.detect_varroa.1))
+# Results: 
+# (expressed in CLD)
+# powsug ^ a
+# alc ^ a
+# infest100 ^ b
+
+
+paircomp_varroa <- tidy(TukeyHSD(aov(m.detect_varroa.1)))
+
+```
+
+
+```{r}
+# Nice Varroa pairwise comparisons table with gt
+
+tbl.paircomp_varroa <- gt(paircomp_varroa) %>% 
+  fmt_number(
+    columns = c("adj.p.value"),
+    decimals = c(6))
+
+tbl.paircomp_varroa <- tbl.paircomp_varroa %>%
+  as_rtf()
+
+my_conn <- file("./outputs/paircomp_varroa_2025-02-10.RTF", "w")
+  writeLines(tbl.paircomp_varroa, my_conn)
+close(my_conn)
+```
+
+
+
+# Explore the similarity between sugar shake and alcohol wash
+
+## Calculate percent agreement
+```{r}
+datum_core <- datum %>% 
+  filter(core == 1)
+
+datum_core2 <- datum %>% 
+  filter(core == 1,
+         tropi_alc < 25)
+
+datum_core <- datum_core %>% 
+  mutate(powsug01 = if_else(tropi_powsug > 0, 1, 0),
+         alc01 = if_else(tropi_alc > 0, 1, 0),
+         agree = if_else(powsug01 + alc01 == 1, 0, 1)
+         )
+
+sum(datum_core$agree)
+21/26 # = 81%
+
+
+```
+
+
+
+
+
