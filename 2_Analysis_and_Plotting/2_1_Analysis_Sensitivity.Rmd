@@ -1,7 +1,7 @@
 ---
 title: "Tropi Physical Monitoring - Analysis of Test Sensitivity"
 author: "Dan Aurell"
-date: "2025-01-17"
+date: "2025-02-24"
 output: 
   html_document:
     keep_md: yes
@@ -87,7 +87,7 @@ m.detect.1 <- glm(detect01 ~ test, family = binomial, data = sub_tropi_detect)
 anova(m.detect.0, m.detect.1, test = "Chisq")
 # Results: Monitoring method had a significant impact on the probability of detecting Tropilaelaps mites from a colony (Chisq = 51.004, df = 4, P < 0.001)
 
-TukeyHSD(aov(m.detect2.1))
+TukeyHSD(aov(m.detect.1))
 # Results: 
 # (expressed in CLD)
 # sticky ^ a
@@ -96,7 +96,7 @@ TukeyHSD(aov(m.detect2.1))
 # powsug ^ b
 # alc ^ b
 
-paircomp_tropi <- tidy(TukeyHSD(aov(m.detect2.1)))
+paircomp_tropi <- tidy(TukeyHSD(aov(m.detect.1)))
 ```
 
 

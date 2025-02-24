@@ -1,7 +1,7 @@
 ---
 title: "Tropi Physical Monitoring - Data Preparation"
 author: "Dan Aurell"
-date: "2025-01-17"
+date: "2025-02-24"
 output:
   html_document: 
     keep_md: yes
@@ -128,14 +128,15 @@ datum_long_all <- datum_long_all %>%
 
 # Subsets for all methods [for Tropi] that are worse than uncapping
 ```{r}
-sub_powsug <- datum_long %>% 
-  filter(target == "tropi", test == "powsug")
+sub_methods <- datum_long %>% 
+  filter(target == "tropi",
+         test %in% c("powsug", "alc", "bump"))
 
-sub_alc <- datum_long %>% 
-  filter(target == "tropi", test == "alc")
-
-sub_bump <- datum_long %>% 
-  filter(target == "tropi", test == "bump")
+sub_methods_slim <- datum_long %>% 
+  filter(target == "tropi",
+         test %in% c("powsug", "alc", "bump"),
+         !(is.na(detect01))) %>% 
+  select(colony_id, test, infest100, detect01)
 ```
 
 
