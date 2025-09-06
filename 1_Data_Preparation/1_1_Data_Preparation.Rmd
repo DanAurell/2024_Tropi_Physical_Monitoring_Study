@@ -126,13 +126,13 @@ datum_long_all <- datum_long_all %>%
 ```
 
 
-# Subsets for all methods [for Tropi] that are worse than uncapping
+# Subsets for all methods (for Tropi) that are worse than uncapping
 ```{r}
-sub_methods <- datum_long %>% 
+sub_methods_tropi <- datum_long %>% 
   filter(target == "tropi",
          test %in% c("powsug", "alc", "bump"))
 
-sub_methods_slim <- datum_long %>% 
+sub_methods_tropi_slim <- datum_long %>% 
   filter(target == "tropi",
          test %in% c("powsug", "alc", "bump"),
          !(is.na(detect01))) %>% 
@@ -140,3 +140,15 @@ sub_methods_slim <- datum_long %>%
 ```
 
 
+# Subsets for all methods (for Varroa) to compare with cell uncapping - this was not pursued because why would you use a less-sensitive method (brood uncapping) as the reference method?
+```{r}
+sub_methods_varroa <- datum_long %>% 
+  filter(target == "varroa",
+         test %in% c("powsug", "alc"))
+
+sub_methods_varroa_slim <- datum_long %>% 
+  filter(target == "varroa",
+         test %in% c("powsug", "alc"),
+         !(is.na(detect01))) %>% 
+  select(colony_id, test, infest100, detect01)
+```

@@ -37,6 +37,16 @@ datum %>%
 
 datum %>% 
   summarise(
+    tropi_min = min(tropi_sticky),
+    tropi_max = max(tropi_sticky),
+    tropi_mean = mean(tropi_sticky),
+    tropi_sd = sd(tropi_sticky)
+    )
+
+# Results: For the 29 colonies, the Tropilaelaps mite fall on sticky boards ranged from 1-750 (mean = 53.9, SD = 138.9). 
+
+datum %>% 
+  summarise(
     varroa_min = min(varroa_infest100),
     varroa_max = max(varroa_infest100),
     varroa_mean = mean(varroa_infest100),
