@@ -107,7 +107,7 @@ p <- ggplot() +
   
   scale_linetype_manual(
   limits = c("bump", "powsug", "alc"),
-  labels = c("Bump test", "Powdered sugar shake", "Alcohol wash"),
+  labels = c("Brood frame bump test", "Powdered sugar shake", "Alcohol wash"),
   values=c("solid", "dotted", "dashed")
   ) +
   
@@ -133,7 +133,7 @@ p +
   theme(legend.position = "none",
         axis.title.x = element_markdown())
 
-ggsave("./outputs/drc_plot_2025-02-24.tiff", width = 11, height = 6, units = "in")
+ggsave("./outputs/drc_plot_2025-09-17.tiff", width = 11, height = 6, units = "in")
 
 
 # With legend
@@ -141,7 +141,7 @@ p +
   geom_line(aes(x = infest100, y = p, linetype = test), data = p.methods) +
   theme(axis.title.x = element_markdown())
 
-ggsave("./outputs/drc_plot_legend_2025-02-24.tiff", width = 11, height = 6, units = "in")
+ggsave("./outputs/drc_plot_legend_2025-09-17.tiff", width = 11, height = 6, units = "in")
 ```
 
 
