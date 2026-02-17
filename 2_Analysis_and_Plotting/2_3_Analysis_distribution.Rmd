@@ -1,0 +1,74 @@
+---
+title: "Tropi Physical Monitoring - Distribution of Tropilaelaps"
+author: "Dan Aurell"
+date: "2026-02-05"
+output: 
+  html_document:
+    keep_md: yes
+---
+
+# Setup
+```{r}
+library(lme4)
+library(performance)
+```
+
+# Sandbox
+
+```{r}
+mean(datum_dist$count_infested) # 3.9 per 50 cells
+```
+
+
+# Further data prep
+
+```{r}
+datum_dist$colony_id <- as.factor(datum_dist$colony_id)
+datum_dist$frame <- as.factor(datum_dist$frame)
+datum_dist$side <- as.factor(datum_dist$side)
+
+datum_dist$frame2 <- rep(1:58, each = 2)
+datum_dist$side2 <- rep(1:116)
+
+```
+
+
+
+# Modeling
+
+```{r}
+model <- glmer(count_infested ~ 1 + (1|colony_id/frame/side), data = datum_dist, family = "poisson")
+summary(model)
+```
+
+```{r}
+model.nb <- glmer.nb(count_infested ~ 1 + (1|colony_id/frame/side), data = datum_dist)
+summary(model.nb)
+
+
+model.nb <- glmer.nb(count_infested ~ 1 + (1|colony_id/frame2/side2), data = datum_dist)
+summary(model.nb)
+
+```
+
+
+```{r}
+icc(model.nb, by_group = TRUE)
+icc(model.nb, by_group = TRUE, adjusted = TRUE)
+```
+```{r}
+install.packages("VCA")
+library(VCA)
+vca_model <- anovaVCA(count_infested ~ colony_id/frame/side, Data = as.data.frame(datum_dist))
+
+summary(vca_model)
+
+```
+
+
+
+
+
+
+
+

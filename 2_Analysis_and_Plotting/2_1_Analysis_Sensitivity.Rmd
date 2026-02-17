@@ -16,44 +16,8 @@ library(ggpubr)
 library(broom)
 library(gt)
 library(multcomp)
-```
-
-
-# Descriptive stats
-```{r}
-# Sample size
-# Methods: We analyzed data from 29 colonies. For all colonies, we performed the sticky board test, cell uncapping, bump test, and powdered sugar test. For 26 of 29 we performed alcohol washes. Tropilaelaps mites were assessed for all test methods, whereas Varroa were assessed only for cell uncapping, powdered sugar shake, and alcohol wash.
-
-datum %>% 
-  summarise(
-    tropi_min = min(tropi_infest100),
-    tropi_max = max(tropi_infest100),
-    tropi_mean = mean(tropi_infest100),
-    tropi_sd = sd(tropi_infest100)
-    )
-
-# Results: For the 29 colonies, the Tropilaelaps cell infestations ranged from 0-37% (mean = 7.8%, SD = 10.0%). 
-
-
-datum %>% 
-  summarise(
-    tropi_min = min(tropi_sticky),
-    tropi_max = max(tropi_sticky),
-    tropi_mean = mean(tropi_sticky),
-    tropi_sd = sd(tropi_sticky)
-    )
-
-# Results: For the 29 colonies, the Tropilaelaps mite fall on sticky boards ranged from 1-750 (mean = 53.9, SD = 138.9). 
-
-datum %>% 
-  summarise(
-    varroa_min = min(varroa_infest100),
-    varroa_max = max(varroa_infest100),
-    varroa_mean = mean(varroa_infest100),
-    varroa_sd = sd(varroa_infest100)
-    )
-# Results: For the 29 colonies, the Varroa cell infestations ranged from 0-53% (mean = 3.5%, SD = 9.9%). 
-
+library(emmeans)
+library(DHARMa)
 ```
 
 
@@ -62,7 +26,7 @@ datum %>%
 
 ## Make a sensitivity table - estimated detection rate by sample method
 ```{r}
-table_percent_detection_core <- datum_long_all %>% 
+table_percent_detection_core <- datum_long %>% 
   filter(core == 1) %>% 
   group_by(target, test) %>% 
   summarise(n = n(),
@@ -79,13 +43,15 @@ write.csv(table_percent_detection_core, "./outputs/table_percent_detection_core.
 
 ## Sensitivity - Analyze Tropilaelaps detection rate by sample method
 ```{r}
-# Using the datum_long_all data frame because I do want to make comparisons with also uncapping 
+# [This first approach - which did not consider the clustering of observations 
+# in colonies - has been superseded by the mixed modeling approach below]
 
-names(datum_long_all)
-unique(datum_long_all$test)
+# Using the datum_long data frame because I do want to make comparisons with also uncapping 
+names(datum_long)
+unique(datum_long$test)
 
 # Only Tropi
-sub_tropi_detect <- datum_long_all %>% 
+sub_tropi_detect <- datum_long %>% 
   filter(core == 1,
          target == "tropi"
          )
@@ -107,13 +73,40 @@ TukeyHSD(aov(m.detect.1))
 # alc ^ b
 
 paircomp_tropi <- tidy(TukeyHSD(aov(m.detect.1)))
+
+
+# Same but in a mixed-effects framework
+m.detect.mm.0 <- glmer(detect01 ~ 1 + (1|colony_id), family = binomial, data = sub_tropi_detect)
+m.detect.mm.1 <- glmer(detect01 ~ test + (1|colony_id), family = binomial, data = sub_tropi_detect)
+
+anova(m.detect.mm.0, m.detect.mm.1, test = "Chisq")
+# Results: Monitoring method had a significant impact on the probability of detecting Tropilaelaps mites from a colony (Chisq = 73.849, df = 4, P < 0.001)
+
+emmeans(m.detect.mm.1, pairwise ~ test, type = "response")$contrasts
+emmeans(m.detect.mm.1, ~test, type = "response")
+
+paircomp_tropi2 <- tidy(emmeans(m.detect.mm.1, pairwise ~ test, type = "response")$contrasts)
+
+# Results: 
+# (expressed in CLD)
+# sticky ^ a
+# infest100 ^ b
+# bump ^ c
+# powsug ^ d
+# alc ^ d
+
+simulateResiduals(m.detect.mm.1, plot = T) # OK
+testDispersion(m.detect.mm.1) # OK
+testZeroInflation(m.detect.mm.1) # OK
+
+
 ```
 
 
 ```{r}
 # Nice Tropi pairwise comparisons table with gt
 
-tbl.paircomp_tropi <- gt(paircomp_tropi) %>% 
+tbl.paircomp_tropi <- gt(paircomp_tropi2) %>% 
   fmt_number(
     columns = c("adj.p.value"),
     decimals = c(6))
@@ -121,7 +114,7 @@ tbl.paircomp_tropi <- gt(paircomp_tropi) %>%
 tbl.paircomp_tropi <- tbl.paircomp_tropi %>%
   as_rtf()
 
-my_conn <- file("./outputs/paircomp_tropi_2025-02-10.RTF", "w")
+my_conn <- file("./outputs/paircomp_tropi_2026-02-08.RTF", "w")
   writeLines(tbl.paircomp_tropi, my_conn)
 close(my_conn)
 ```
@@ -129,26 +122,32 @@ close(my_conn)
 
 ## Sensitivity - Analyze Varroa detection rate by sample method
 ```{r}
-# Using the datum_long_all data frame because I do want to make comparisons with also uncapping 
+# Using the datum_long data frame because I do want to make comparisons with also uncapping 
 
-names(datum_long_all)
-unique(datum_long_all$test)
+names(datum_long)
+unique(datum_long$test)
 
 # For Varroa, need to omit sticky board and bump since did not record Varroa on them
-sub_varroa_detect <- datum_long_all %>% 
+sub_varroa_detect <- datum_long %>% 
   filter(core == 1,
          target == "tropi",
-         test %in% c("infest100", "powsug", "alc")
+         test %in% c("infest200", "powsug", "alc")
          )
 
-# Fit null model and another with test as a predictor
-m.detect_varroa.0 <- glm(detect01 ~ 1, family = binomial, data = sub_varroa_detect)
-m.detect_varroa.1 <- glm(detect01 ~ test, family = binomial, data = sub_varroa_detect)
+# Mixed model framework
 
-anova(m.detect_varroa.0, m.detect_varroa.1, test = "Chisq")
-# Results: Monitoring method had a significant impact on the probability of detecting Varroa mites from a colony (Chisq = 25.019, df = 2, P < 0.001)
+# Same but in a mixed-effects framework
+m.detect.varroa.mm.0 <- glmer(detect01 ~ 1 + (1|colony_id), family = binomial, data = sub_varroa_detect)
+m.detect.varroa.mm.1 <- glmer(detect01 ~ test + (1|colony_id), family = binomial, data = sub_varroa_detect)
 
-TukeyHSD(aov(m.detect_varroa.1))
+anova(m.detect.varroa.mm.0, m.detect.varroa.mm.1, test = "Chisq")
+# Results: Monitoring method had a significant impact on the probability of detecting Varroa mites from a colony (Chisq = 37.471, df = 2, P < 0.001)
+
+emmeans(m.detect.varroa.mm.1, pairwise ~ test, type = "response")$contrasts
+emmeans(m.detect.varroa.mm.1, ~test, type = "response")
+
+paircomp_varroa2 <- tidy(emmeans(m.detect.varroa.mm.1, pairwise ~ test, type = "response")$contrasts)
+
 # Results: 
 # (expressed in CLD)
 # powsug ^ a
@@ -156,15 +155,16 @@ TukeyHSD(aov(m.detect_varroa.1))
 # infest100 ^ b
 
 
-paircomp_varroa <- tidy(TukeyHSD(aov(m.detect_varroa.1)))
-
+simulateResiduals(m.detect.varroa.mm.1, plot = T) # OK
+testDispersion(m.detect.varroa.mm.1) # OK
+testZeroInflation(m.detect.varroa.mm.1) # OK
 ```
 
 
 ```{r}
 # Nice Varroa pairwise comparisons table with gt
 
-tbl.paircomp_varroa <- gt(paircomp_varroa) %>% 
+tbl.paircomp_varroa <- gt(paircomp_varroa2) %>% 
   fmt_number(
     columns = c("adj.p.value"),
     decimals = c(6))
@@ -172,7 +172,7 @@ tbl.paircomp_varroa <- gt(paircomp_varroa) %>%
 tbl.paircomp_varroa <- tbl.paircomp_varroa %>%
   as_rtf()
 
-my_conn <- file("./outputs/paircomp_varroa_2025-02-10.RTF", "w")
+my_conn <- file("./outputs/paircomp_varroa_2026-02-08.RTF", "w")
   writeLines(tbl.paircomp_varroa, my_conn)
 close(my_conn)
 ```

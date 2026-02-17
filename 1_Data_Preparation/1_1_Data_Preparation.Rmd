@@ -14,17 +14,44 @@ library(tidyverse)
 
 # Read in data
 ```{r}
-datum <- read.csv("./data/2025-02-24 monitoring field data reduced.csv") 
+# datum <- read.csv("./data/2025-02-24 monitoring field data reduced.csv") 
+datum <- read.csv("./data/2026-02-03 monitoring field data reduced.csv") 
 ```
 
 
-# Prepare data
+# Prepare data to investigate distribution of Tropilaelaps mites
 ```{r}
-# names(datum)
+datum_dist <- datum %>% 
+  select(colony_id, tropi_1_50, tropi_51_100, tropi_101_150, tropi_151_200)
+
+datum_dist <- datum_dist %>% 
+  pivot_longer(cols = starts_with("tropi"), names_to = "uncap_subset", values_to = "count_infested")
+
+datum_dist <- datum_dist %>% 
+  mutate(
+    frame = case_when(uncap_subset == "tropi_1_50" ~ 1,
+              uncap_subset == "tropi_51_100" ~ 1,
+              uncap_subset == "tropi_101_150" ~ 2,
+              uncap_subset == "tropi_151_200" ~ 2
+              ),
+    side = case_when(uncap_subset == "tropi_1_50" ~ "A",
+              uncap_subset == "tropi_51_100" ~ "B",
+              uncap_subset == "tropi_101_150" ~ "A",
+              uncap_subset == "tropi_151_200" ~ "B"
+              )    
+  )
+```
+
+
+# Prepare data for main analyses
+```{r}
+names(datum)
 
 # Reduce dataset to columns I'll use
 datum <- datum %>% 
   select(colony_id,
+         fob,
+         brd_pattern,
          tropi_infest200:varroa_alc
          )
 
@@ -36,8 +63,7 @@ datum <- datum %>%
   select(colony_id, 
          tropi_infest100, 
          varroa_infest100, 
-         everything(),
-         -c(tropi_infest200, varroa_infest200) # get 200-cell ones out of the way
+         everything()
          )
 
 # Make a column to indicate if the row is part of the "core" dataset - the 26 colonies which had all monitoring methods applied to them
@@ -61,8 +87,8 @@ names(datum)
 
 datum_long <- datum %>% 
   pivot_longer(cols = c(
-    tropi_infest100,
-    varroa_infest100,
+    tropi_infest200,
+    varroa_infest200,
     tropi_sticky,
     tropi_powsug,
     tropi_alc,
@@ -75,6 +101,7 @@ datum_long <- datum %>%
   ) %>% 
 
   pivot_longer(cols = c(
+    infest200,
     sticky,
     powsug,
     alc,
@@ -83,34 +110,6 @@ datum_long <- datum %>%
     names_to = "test",
     values_to = "mites_num"
   )
-
-# A version with even the predictors (infestation of brood cells) pivoted by target species
-datum_long_all <- datum %>% 
-  pivot_longer(cols = c(
-    tropi_infest100,
-    varroa_infest100,
-    tropi_sticky,
-    tropi_powsug,
-    tropi_alc,
-    tropi_bump,
-    varroa_powsug,
-    varroa_alc
-    ),
-    names_to = c("target", ".value"), 
-    names_sep = "_"
-  ) %>% 
-
-  pivot_longer(cols = c(
-    infest100,
-    sticky,
-    powsug,
-    alc,
-    bump
-  ),
-    names_to = "test",
-    values_to = "mites_num"
-  )
-
 
 
 ```
@@ -121,8 +120,6 @@ datum_long_all <- datum %>%
 datum_long <- datum_long %>% 
   mutate(detect01 = if_else(mites_num > 0, 1, 0))
 
-datum_long_all <- datum_long_all %>% 
-  mutate(detect01 = if_else(mites_num > 0, 1, 0))
 ```
 
 
@@ -130,13 +127,20 @@ datum_long_all <- datum_long_all %>%
 ```{r}
 sub_methods_tropi <- datum_long %>% 
   filter(target == "tropi",
+         core == 1,
          test %in% c("powsug", "alc", "bump"))
+
+names(datum_long)
 
 sub_methods_tropi_slim <- datum_long %>% 
   filter(target == "tropi",
-         test %in% c("powsug", "alc", "bump"),
-         !(is.na(detect01))) %>% 
-  select(colony_id, test, infest100, detect01)
+         core == 1,
+         test %in% c("powsug", "alc", "bump")) %>% 
+  select(colony_id, test, tropi_infest100, detect01)
+
+sub_methods_tropi_slim %>%
+  group_by(test) %>% 
+  summarize(n = n())
 ```
 
 
@@ -150,5 +154,8 @@ sub_methods_varroa_slim <- datum_long %>%
   filter(target == "varroa",
          test %in% c("powsug", "alc"),
          !(is.na(detect01))) %>% 
-  select(colony_id, test, infest100, detect01)
+  select(colony_id, test, varroa_infest100, detect01)
+
+
+
 ```
