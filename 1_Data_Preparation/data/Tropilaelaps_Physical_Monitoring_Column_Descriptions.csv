@@ -1,0 +1,24 @@
+﻿column name,column description
+colony_id,Unique identifier for each Apis mellifera colony
+sample_date,"Date that brood was uncapped and colony-level metrics were recorded (queen status, frames of bees, brood pattern)"
+location,Apiary location (all at campus of Chiang Mai University)
+fob,Frames of bees assessed by looking between top bars of box and recording how many spaces were well occupied
+queen_status,"Presence of queen. QR = ""Queen Right"" when queen-laid eggs were observed; QS = ""Queen Seen"" when the queen was visually observed"
+brd_pattern,"Brood pattern (solidness) of capped brood, scored on a scale from 1-5, with 1 being extremely spotty, and 5 being very solid"
+tropi_1_50,Tropilaelaps-infested cells found in cells 1-50
+tropi_51_100,Tropilaelaps-infested cells found in cells 51-100
+tropi_101_150,Tropilaelaps-infested cells found in cells 101-150
+tropi_151_200,Tropilaelaps-infested cells found in cells 151-200
+tropi_infest200,Total number of Tropilaelaps-infested cells found in 200 uncapped cells
+tropi_sticky,Number of Tropilaelaps mites found on sticky board
+tropi_powsug,Number of Tropilaelaps mites found in powdered sugar shake
+tropi_alc,Number of Tropilaelaps mites found in alcohol wash
+tropi_bump,Number of Tropilaelaps mites found in bump test
+varroa_infest200,Total number of Varroa-infested cells found in 200 uncapped cells
+varroa_powsug,Number of Varroa mites found in powdered sugar shake
+varroa_alc,Number of Varroa mites found in alcohol wash
+date_sticky_in,Date that sticky board was put in hive
+date_sticky_pull,Date that sticky board was retrieved from hive
+date_powsug,Date that powdered sugar shake was performed
+date_alc,Date that alcohol wash  was performed
+date_bump,Date that bump test was performed
