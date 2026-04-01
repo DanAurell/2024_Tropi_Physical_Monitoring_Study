@@ -1,0 +1,138 @@
+# Setup ----
+library(drc)
+library(ggtext)
+
+# drc modeling ----
+# Model three test types separately using `drm` in the `drc` package
+
+
+# ?getMeanFunctions()
+# getMeanFunctions()
+
+# Options include
+# LL.2 - Log-logistic (ED50 as parameter) with lower limit at 0 and upper limit at 1 
+
+# Individual curve fits
+bump <- drm(
+  detect01 ~ tropi_infest100, data = sub_methods_tropi, fct=LL.2(), 
+  type="binomial", subset = test == "bump"
+)
+
+summary(bump)
+ED(bump, c(50), interval = "delta")
+# Results: The detection threshold for the bump test was 1.15% Tropilaelaps cell infestation (SE = 0.46; 95% CI: 0.26-2.04)
+
+
+alc <- drm(
+  detect01 ~ tropi_infest100, data = sub_methods_tropi, fct=LL.2(), 
+  type="binomial", subset = test == "alc"
+)
+summary(alc)
+ED(alc, c(50), interval = "delta")
+# Results: the threshold for alcohol wash was 5.20% (SE = 2.32; 95% CI: 0.65-9.76)
+
+
+powsug <- drm(
+  detect01 ~ tropi_infest100, data = sub_methods_tropi, fct=LL.2(), 
+  type="binomial", subset = test == "powsug"
+)
+summary(powsug)
+ED(powsug, c(50), interval = "delta")
+# Results: the threshold for powdered sugar shake was 5.67% (SE = 2.05; 95% CI: 1.65-9.69)
+
+
+
+
+# Can do 95% CI adjusted for multiple comparison, if I wanted to use CIs to make comparisons between treatments. The goal here is estimation, so I present uncorrected CIs from above
+
+# adjustCI <- ED(model, c(50), interval = "delta",
+#                      multcomp = TRUE, display = FALSE)
+
+# confint(glht(adjustCI[["EDmultcomp"]]))
+
+
+
+# Send predictions from drm fits to ggplot ----
+
+
+infest100 <- c(seq(from = 0, to = 37, by = 0.025))
+newdata <- data.frame(infest100)
+
+
+
+p <- predict(bump, newdata = newdata, type = "response")
+p.bump <- cbind(newdata, p)
+p.bump$test <- "bump"
+
+
+
+p <- predict(powsug, newdata = newdata, type = "response")
+p.powsug <- cbind(newdata, p)
+p.powsug$test <- "powsug"
+
+
+
+p <- predict(alc, newdata = newdata, type = "response")
+p.alc <- cbind(newdata, p)
+p.alc$test <- "alc"
+
+
+
+
+
+# Binding predictions together ----
+
+p.methods <- rbind(p.powsug, p.alc, p.bump)
+
+
+
+# Plotting ----
+
+
+# Predictions for all three efficient sample types on one graph
+p <- ggplot() +
+  
+  geom_segment(aes(x = 0, xend = 5.67, y = 0.5, yend = 0.5), alpha = 0.4, linetype = "solid") +
+  geom_segment(aes(x = 1.15, xend = 1.15, y = 0, yend = 0.5), alpha = 0.4, linetype = "solid") +
+  geom_segment(aes(x = 5.67, xend = 5.67, y = 0, yend = 0.5), alpha = 0.6, linetype = "dotted") +
+  geom_segment(aes(x = 5.2, xend = 5.2, y = 0, yend = 0.5), alpha = 0.5, linetype = "dashed") +
+  
+  # geom_line(aes(x = infest100, y = p, linetype = test), data = p.methods, linewidth = 1) +
+  
+  scale_linetype_manual(
+    limits = c("bump", "powsug", "alc"),
+    labels = c("Brood frame bump test", "Powdered sugar shake", "Alcohol wash"),
+    values=c("solid", "dotted", "dashed")
+  ) +
+  
+  
+  scale_x_continuous(breaks = c(0,5,10, 15,20, 25,30), limits = c(0,15), expand = expansion(mult = c(0, 0))) +
+  scale_y_continuous(
+    breaks = c(0,0.25,0.5,0.75,1),
+    labels = c(0,25,50,75,100),
+    limits = c(0,1), 
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  
+  labs(linetype = "Method") +
+  ylab("Detection probability (%)") +
+  xlab("<i>Tropilaelaps mercedesae</i> infestation<br>of worker brood cells (%)") +
+  
+  theme_classic(base_size = 22)
+
+
+# Without legend
+p +
+  geom_line(aes(x = infest100, y = p, linetype = test), data = p.methods, linewidth = 1) +
+  theme(legend.position = "none",
+        axis.title.x = element_markdown())
+
+ggsave("./2_Analysis_and_Plotting/outputs/drc_plot_2026-03-31.tiff", width = 11, height = 6, units = "in")
+
+
+# With legend
+p +
+  geom_line(aes(x = infest100, y = p, linetype = test), data = p.methods) +
+  theme(axis.title.x = element_markdown())
+
+ggsave("./2_Analysis_and_Plotting/outputs/drc_plot_legend_2026-03-31.tiff", width = 11, height = 6, units = "in")
