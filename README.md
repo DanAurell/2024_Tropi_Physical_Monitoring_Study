@@ -1,2 +1,10 @@
-# 2024_Tropi_Physical_Monitoring_Study
-Data and analysis for a study on the sensitivity of physical monitoring methods for Tropilaelaps mercedesae mites in Apis mellifera honey bee colonies
+# Data and analysis code from: Sensitivity of current *Tropilaelaps mercedesae* monitoring methods in *Apis mellifera* colonies
+
+[![DOI]()]()
+
+
+### Citation
+Tokach, R., Aurell, Chuttong, B., Williams, G.R. 2026. Sensitivity of current *Tropilaelaps mercedesae* monitoring methods in *Apis mellifera* colonies. *Scientific Reports*. []().
+
+### License
+The dataset and code are provided with a Creative Commons Attribution License ([CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)).

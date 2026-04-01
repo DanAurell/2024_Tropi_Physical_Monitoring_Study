@@ -9,9 +9,6 @@ library(ggpubr)
 
 names(datum)
 
-# Go back and run data preparation script ----
-
-
 # Analysis of distribution of Tropilaelaps ----
 
 datum2 <- datum %>% 
