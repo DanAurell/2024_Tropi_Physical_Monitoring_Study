@@ -1,0 +1,142 @@
+
+# Setup ----
+
+library(tidyverse)
+
+
+# Read in data
+
+datum <- read.csv("./1_Data_Preparation/data/2026-02-03 monitoring field data reduced.csv") 
+
+# Data preparation ----
+
+# Prepare data to investigate distribution of Tropilaelaps mites
+
+datum_dist <- datum %>% 
+  select(colony_id, tropi_1_50, tropi_51_100, tropi_101_150, tropi_151_200)
+
+datum_dist <- datum_dist %>% 
+  pivot_longer(cols = starts_with("tropi"), names_to = "uncap_subset", values_to = "count_infested")
+
+datum_dist <- datum_dist %>% 
+  mutate(
+    frame = case_when(uncap_subset == "tropi_1_50" ~ 1,
+                      uncap_subset == "tropi_51_100" ~ 1,
+                      uncap_subset == "tropi_101_150" ~ 2,
+                      uncap_subset == "tropi_151_200" ~ 2
+    ),
+    side = case_when(uncap_subset == "tropi_1_50" ~ "A",
+                     uncap_subset == "tropi_51_100" ~ "B",
+                     uncap_subset == "tropi_101_150" ~ "A",
+                     uncap_subset == "tropi_151_200" ~ "B"
+    )    
+  )
+
+
+# Reduce dataset to columns I'll use in main analyses
+names(datum)
+
+datum <- datum %>% 
+  select(colony_id,
+         fob,
+         brd_pattern,
+         tropi_infest200:varroa_alc,
+         tropi_1_50, tropi_51_100, tropi_101_150, tropi_151_200
+  )
+
+# Make a percent Tropi and Percent Varroa column
+
+datum <- datum %>% 
+  mutate(tropi_infest100 = tropi_infest200/2,
+         varroa_infest100 = varroa_infest200/2) %>% 
+  select(colony_id, 
+         tropi_infest100, 
+         varroa_infest100, 
+         everything()
+  )
+
+# Make a column to indicate if the row is part of the "core" dataset - the 26 colonies which had all monitoring methods applied to them
+
+datum <- datum %>% 
+  mutate(core = case_when(
+    !is.na(tropi_alc) ~ 1,
+    is.na(tropi_alc) ~ 0
+  ))
+
+
+
+
+# Making long dataset ----
+
+# Main version of long dataset - Predictors (Tropi and Varroa data from uncapping) in their own column, but results from all the other tests are in a combined column
+
+datum_long <- datum %>% 
+  pivot_longer(cols = c(
+    tropi_infest200,
+    varroa_infest200,
+    tropi_sticky,
+    tropi_powsug,
+    tropi_alc,
+    tropi_bump,
+    varroa_powsug,
+    varroa_alc
+  ),
+  names_to = c("target", ".value"), 
+  names_sep = "_"
+  ) %>% 
+  
+  pivot_longer(cols = c(
+    infest200,
+    sticky,
+    powsug,
+    alc,
+    bump
+  ),
+  names_to = "test",
+  values_to = "mites_num"
+  )
+
+
+
+# Score detection or not ----
+
+datum_long <- datum_long %>% 
+  mutate(detect01 = if_else(mites_num > 0, 1, 0))
+
+
+
+# Subsetting ----
+
+# Subsets for all methods (for Tropi) that are worse than uncapping
+
+sub_methods_tropi <- datum_long %>% 
+  filter(target == "tropi",
+         core == 1,
+         test %in% c("powsug", "alc", "bump"))
+
+names(datum_long)
+
+sub_methods_tropi_slim <- datum_long %>% 
+  filter(target == "tropi",
+         core == 1,
+         test %in% c("powsug", "alc", "bump")) %>% 
+  select(colony_id, test, tropi_infest100, detect01)
+
+sub_methods_tropi_slim %>%
+  group_by(test) %>% 
+  summarize(n = n())
+
+
+# Subsets for all methods (for Varroa) to compare with cell uncapping - this was not pursued because why would you use a less-sensitive method (brood uncapping) as the reference method?
+
+sub_methods_varroa <- datum_long %>% 
+  filter(target == "varroa",
+         test %in% c("powsug", "alc"))
+
+sub_methods_varroa_slim <- datum_long %>% 
+  filter(target == "varroa",
+         test %in% c("powsug", "alc"),
+         !(is.na(detect01))) %>% 
+  select(colony_id, test, varroa_infest100, detect01)
+
+

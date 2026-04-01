@@ -115,7 +115,7 @@ datum %>%
     n = n()
   )
 
-# Results: For the 26 colonies, the Varroa _
+# Results: For the 26 colonies, the Varroa collected
 # ranged from 0-54 (mean = 10.2, SD = 14.6). 
 
 
@@ -131,7 +131,7 @@ datum %>%
     n = n()
   )
 
-# Results: For the 26 colonies, the Varroa _
+# Results: For the 26 colonies, the Varroa collected
 # ranged from 0-57% (mean = 9, SD = 13.9). 
 
 
@@ -148,31 +148,5 @@ datum %>%
   )
 # Results: For the 26 colonies, the Varroa cell infestations 
 # ranged from 0-9% (mean = 1.8%, SD = 2.8%).
-
-
-
-# Pearson correlations
-
-library(GGally)
- 
-ggpairs(datum2,
-        columns = c("tropi_infest200", "tropi_sticky", "tropi_powsug", "tropi_alc", "tropi_bump"),
-        upper = list(continuous = wrap("cor", size = 3)), 
-        lower = list(continuous = wrap("smooth")),
-        # diag = list(continuous = wrap("density")),
-        title = "Tropilaelaps monitoring methods")
-
-ggsave("./2_Analysis_and_Plotting/outputs/pearson_plot_tropi_2026-02-08.tiff", width = 8, height = 8, units = "in")
-
-ggpairs(datum2,
-        columns = c("varroa_infest200", "varroa_powsug", "varroa_alc"),
-        upper = list(continuous = wrap("cor", size = 3)), 
-        lower = list(continuous = wrap("smooth")),
-        # diag = list(continuous = wrap("density")),
-        title = "Varroa monitoring methods")
-
-ggsave("./2_Analysis_and_Plotting/outputs/pearson_plot_varroa_2026-02-08.tiff", width = 5, height = 5, units = "in")
-
-
 
 
